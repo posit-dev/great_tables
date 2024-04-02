@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
-from typing import TYPE_CHECKING, Optional, Any
+from typing import TYPE_CHECKING, Optional, Any, Union
 from typing_extensions import Self
 
 from ._utils import _assert_list_is_subset
@@ -177,3 +177,12 @@ def _print_boxhead(self: GTSelf) -> pd.DataFrame:
         )
     )
     return pd.DataFrame(boxhead_list, columns=["var", "visible", "column_label"])
+
+
+def cols_align_decimal(
+    self: GTSelf,
+    columns: Optional[str] = None,
+    dec_mark: str = ".",
+    locale: Union[str, None] = None,
+) -> GTSelf:
+    pass
