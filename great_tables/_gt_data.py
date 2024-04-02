@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import re
 
-from typing import overload, TypeVar, Dict, Optional
+from typing import overload, TypeVar, Dict, Optional, Callable
 from typing_extensions import Self, TypeAlias
 from dataclasses import dataclass, field, replace
 from ._utils import _str_detect
@@ -42,6 +42,7 @@ class GTData:
     _locale: Locale | None
     _formats: Formats
     _substitutions: Formats
+    _text_transforms: TextTransforms
     _options: Options
     _has_built: bool = False
 
@@ -96,6 +97,7 @@ class GTData:
             _locale=Locale(locale),
             _formats=[],
             _substitutions=[],
+            _text_transforms=[],
             _options=options,
         )
 
@@ -164,6 +166,17 @@ class Body:
                 # TODO: I think that this is very inefficient with polars, so
                 # we could either accumulate results and set them per column, or
                 # could always use a pandas DataFrame inside Body?
+                _set_cell(self.body, row, col, result)
+
+        return self
+
+    def render_text_transforms(self, body_tbl: TblData, text_transforms: List[TextTransformInfo]):
+        for transform in text_transforms:
+            eval_func = getattr(transform.func, "default", None)
+            if eval_func is None:
+                raise Exception("Internal Error")
+            for col, row in transform.cells.resolve():
+                result = eval_func(_get_cell(body_tbl, row, col))
                 _set_cell(self.body, row, col, result)
 
         return self
@@ -910,6 +923,38 @@ class FormatInfo:
 #     def __init__(self):
 #         pass
 Formats = list
+
+
+# Text Transforms ----
+__TextTransforms = None
+
+TextTransformFn = Callable[[Any], "str"]
+
+
+class TextTransformFns:
+    html: Optional[TextTransformFn]
+    latex: Optional[TextTransformFn]
+    rtf: Optional[TextTransformFn]
+    default: Optional[TextTransformFn]
+
+    def __init__(self, **kwargs: TextTransformFn):
+        for format in ["html", "latex", "rtf", "default"]:
+            if kwargs.get(format):
+                setattr(self, format, kwargs[format])
+
+
+class TextTransformInfo:
+    """Contains functions for transforming text, with the columns and rows to apply the tranform to."""
+
+    func: TextTransformFns
+    cells: CellSubset
+
+    def __init__(self, func: TextTransformFns, cols: List[str], rows: List[int]):
+        self.func = func
+        self.cells = CellRectangle(cols, rows)
+
+
+TextTransforms = list
 
 # Tbl Data ----
 from ._tbl_data import TblData
