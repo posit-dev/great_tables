@@ -179,24 +179,8 @@ def data_color(
     else:
         na_color = _html_color(colors=[na_color], alpha=alpha)[0]
 
-    # If palette is not provided, use a default palette
-    if palette is None:
-        palette = DEFAULT_PALETTE
-    elif isinstance(palette, str):
-        # Check if the `palette` value refers to a ColorBrewer or viridis palette
-        # and, if it is, then convert it to a list of hexadecimal color values; otherwise,
-        # convert it to a list (this assumes that the value is a single color)
-        if palette in ALL_PALETTES:
-            palette = ALL_PALETTES[palette]
-        else:
-            palette = [palette]
-
-    # Reverse the palette if `reverse` is set to `True`
-    if reverse:
-        palette = palette[::-1]
-
-    # Standardize values in `palette` to hexadecimal color values
-    palette = _html_color(colors=palette, alpha=alpha)
+    if isinstance(palette, (list, str, type(None))):
+        palette = _process_palette(palette, reverse, alpha)
 
     # Set a flag to indicate whether or not the domain should be calculated automatically
     if domain is None:
@@ -246,9 +230,7 @@ def data_color(
                 domain = _get_domain_factor(df=data_table, vals=column_vals)
 
             # Rescale only the non-NA values in `column_vals` to the range [0, 1]
-            scaled_vals = _rescale_factor(
-                df=data_table, vals=column_vals, domain=domain, palette=palette
-            )
+            scaled_vals = _rescale_factor(df=data_table, vals=column_vals, domain=domain)
 
         else:
             raise ValueError(
@@ -259,7 +241,10 @@ def data_color(
         scaled_vals = [np.nan if is_na(data_table, x) else x for x in scaled_vals]
 
         # Create a color scale function from the palette
-        color_scale_fn = gradient_n_pal(colors=palette)
+        if not callable(palette):
+            color_scale_fn = gradient_n_pal(colors=palette)
+        else:
+            color_scale_fn = palette
 
         # Call the color scale function on the scaled values to get a list of colors
         color_vals = color_scale_fn(scaled_vals)
@@ -283,6 +268,31 @@ def data_color(
                     style=fill(color=color_vals[i]), locations=body(columns=col, rows=[i])
                 )
     return gt_obj
+
+
+def _process_palette(
+    palette: Union[str, List[str], None], reverse: bool, alpha: Optional[Union[int, float]]
+):
+    # If palette is not provided, use a default palette
+    if palette is None:
+        palette = DEFAULT_PALETTE
+    elif isinstance(palette, str):
+        # Check if the `palette` value refers to a ColorBrewer or viridis palette
+        # and, if it is, then convert it to a list of hexadecimal color values; otherwise,
+        # convert it to a list (this assumes that the value is a single color)
+        if palette in ALL_PALETTES:
+            palette = ALL_PALETTES[palette]
+        else:
+            palette = [palette]
+
+    # Reverse the palette if `reverse` is set to `True`
+    if reverse:
+        palette = palette[::-1]
+
+    # Standardize values in `palette` to hexadecimal color values
+    palette = _html_color(colors=palette, alpha=alpha)
+
+    return palette
 
 
 def _ideal_fgnd_color(bgnd_color: str, light: str = "#FFFFFF", dark: str = "#000000") -> str:
@@ -609,7 +619,7 @@ def _rescale_numeric(
 
 
 def _rescale_factor(
-    df: DataFrameLike, vals: List[Union[int, float]], domain: List[float], palette: List[str]
+    df: DataFrameLike, vals: List[Union[int, float]], domain: List[float]  # , palette: List[str]
 ) -> List[float]:
     """
     Rescale factor values
@@ -618,12 +628,12 @@ def _rescale_factor(
     """
 
     domain_length = len(domain)
-    palette_length = len(palette)
+    # palette_length = len(palette)
 
-    if domain_length <= palette_length:
-        # If the length of `domain` is less than or equal to the length of `palette`, then clip the
-        # length of `palette` to the length of `domain`
-        palette = palette[:domain_length]
+    # if domain_length <= palette_length:
+    #     # If the length of `domain` is less than or equal to the length of `palette`, then clip the
+    #     # length of `palette` to the length of `domain`
+    #     palette = palette[:domain_length]
 
     # For each value in `vals`, get the index of the value in `domain` but if not present then
     # use NA; then scale these index values to the range [0, 1]
