@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from great_tables import GT, exibble, md
+from great_tables import GT, exibble, loc, md
 from great_tables._scss import compile_scss
 from great_tables._gt_data import default_fonts_list
 
@@ -328,7 +328,6 @@ def test_scss_from_opt_table_outline(gt_tbl: GT, snapshot):
 
 
 def test_opt_table_font_add_font():
-
     gt_tbl = GT(exibble).opt_table_font(font="Arial", weight="bold", style="italic")
 
     assert gt_tbl._options.table_font_names.value == ["Arial"] + default_fonts_list
@@ -369,3 +368,74 @@ def test_opt_table_font_raises():
         GT(exibble).opt_table_font(font=None, stack=None)
 
     assert "Either `font=` or `stack=` must be provided." in exc_info.value.args[0]
+
+
+def test_opt_all_caps(gt_tbl: GT):
+    tbl = gt_tbl.opt_all_caps(locations=loc.column_labels)
+
+    assert tbl._options.column_labels_font_size.value == "80%"
+    assert tbl._options.column_labels_font_weight.value == "bolder"
+    assert tbl._options.column_labels_text_transform.value == "uppercase"
+
+    tbl = gt_tbl.opt_all_caps(locations=[loc.column_labels, loc.stub])
+
+    assert tbl._options.column_labels_font_size.value == "80%"
+    assert tbl._options.column_labels_font_weight.value == "bolder"
+    assert tbl._options.column_labels_text_transform.value == "uppercase"
+
+    assert tbl._options.stub_font_size.value == "80%"
+    assert tbl._options.stub_font_weight.value == "bolder"
+    assert tbl._options.stub_text_transform.value == "uppercase"
+
+    tbl = gt_tbl.opt_all_caps(locations=[loc.column_labels, loc.stub, loc.row_group])
+
+    assert tbl._options.column_labels_font_size.value == "80%"
+    assert tbl._options.column_labels_font_weight.value == "bolder"
+    assert tbl._options.column_labels_text_transform.value == "uppercase"
+
+    assert tbl._options.stub_font_size.value == "80%"
+    assert tbl._options.stub_font_weight.value == "bolder"
+    assert tbl._options.stub_text_transform.value == "uppercase"
+
+    assert tbl._options.row_group_font_size.value == "80%"
+    assert tbl._options.row_group_font_weight.value == "bolder"
+    assert tbl._options.row_group_text_transform.value == "uppercase"
+
+    # Activate the following tests once the circular import issue is resolved.
+    # tbl = gt_tbl.opt_all_caps()
+
+    # assert tbl._options.column_labels_font_size.value == "80%"
+    # assert tbl._options.column_labels_font_weight.value == "bolder"
+    # assert tbl._options.column_labels_text_transform.value == "uppercase"
+
+    # assert tbl._options.stub_font_size.value == "80%"
+    # assert tbl._options.stub_font_weight.value == "bolder"
+    # assert tbl._options.stub_text_transform.value == "uppercase"
+
+    # assert tbl._options.row_group_font_size.value == "80%"
+    # assert tbl._options.row_group_font_weight.value == "bolder"
+    # assert tbl._options.row_group_text_transform.value == "uppercase"
+
+    # tbl = gt_tbl.opt_all_caps(all_caps=False)
+
+    # assert tbl._options.column_labels_font_size.value == "100%"
+    # assert tbl._options.column_labels_font_weight.value == "normal"
+    # assert tbl._options.column_labels_text_transform.value == "inherit"
+
+    # assert tbl._options.stub_font_size.value == "100%"
+    # assert tbl._options.stub_font_weight.value == "initial"
+    # assert tbl._options.stub_text_transform.value == "inherit"
+
+    # assert tbl._options.row_group_font_size.value == "100%"
+    # assert tbl._options.row_group_font_weight.value == "initial"
+    # assert tbl._options.row_group_text_transform.value == "inherit"
+
+
+def test_opt_all_caps_raises(gt_tbl: GT):
+    with pytest.raises(AssertionError) as exc_info:
+        gt_tbl.opt_all_caps(locations="column_labels")
+
+    assert (
+        "Only `loc.column_labels`, `loc.stub` and `loc.row_group` are allowed in the locations."
+        in exc_info.value.args[0]
+    )
