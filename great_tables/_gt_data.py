@@ -167,15 +167,17 @@ class Body:
             eval_func = getattr(fmt.func, context, fmt.func.default)
             if eval_func is None:
                 raise Exception("Internal Error")
+            cell_info = []
             for col, row in fmt.cells.resolve():
                 result = eval_func(_get_cell(data_tbl, row, col))
                 if isinstance(result, FormatterSkipElement):
                     continue
-
-                # TODO: I think that this is very inefficient with polars, so
-                # we could either accumulate results and set them per column, or
-                # could always use a pandas DataFrame inside Body?
-                _set_cell(self.body, row, col, result)
+                cell_info.append((row, col, result))
+            # TODO: I think that this is very inefficient with polars, so
+            # we could either accumulate results and set them per column, or
+            # could always use a pandas DataFrame inside Body?
+            for _cell_info in cell_info:
+                data_tbl = _set_cell(self.body, *_cell_info)
 
         return self
 

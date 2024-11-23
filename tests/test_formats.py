@@ -57,6 +57,22 @@ def test_format_fns():
     assert res == ["2", "3"]
 
 
+def test_format_multi_fns():
+    df = pd.DataFrame({"x": [1, 2]})
+    gt = GT(df)
+    new_gt = fmt(gt, fns=[lambda x: str(x + 1), lambda x: str(x + 2)], columns=["x"])
+
+    formats_fn = new_gt._formats[0]
+
+    res = list(map(formats_fn.func.default, df["x"]))
+    assert res == ["2", "3"]
+
+    formats_fn = new_gt._formats[1]
+
+    res = list(map(formats_fn.func.default, df["x"]))
+    assert res == ["3", "4"]
+
+
 def test_format_snap(snapshot):
     new_gt = (
         GT(exibble)

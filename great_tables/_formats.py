@@ -125,23 +125,25 @@ def fmt(
     )
     ```
     """
+    row_res = resolve_rows_i(self, rows)
+    row_pos = [name_pos[1] for name_pos in row_res]
+    col_res = resolve_cols_c(self, columns)
 
     # If a single function is supplied to `fns` then
     # repackage that into a list as the `default` function
+    formatter: list[FormatInfo] = []
     if isinstance(fns, Callable):
-        fns = FormatFns(default=fns)
-
-    row_res = resolve_rows_i(self, rows)
-    row_pos = [name_pos[1] for name_pos in row_res]
-
-    col_res = resolve_cols_c(self, columns)
-
-    formatter = FormatInfo(fns, col_res, row_pos)
+        _fmtfs = FormatFns(default=fns)
+        formatter.append(FormatInfo(_fmtfs, col_res, row_pos))
+    elif isinstance(fns, list):
+        for _fns in fns:
+            _fmtfs = FormatFns(default=_fns)
+            formatter.append(FormatInfo(_fmtfs, col_res, row_pos))
 
     if is_substitution:
-        return self._replace(_substitutions=[*self._substitutions, formatter])
+        return self._replace(_substitutions=[*self._substitutions, *formatter])
 
-    return self._replace(_formats=[*self._formats, formatter])
+    return self._replace(_formats=[*self._formats, *formatter])
 
 
 def fmt_number(
