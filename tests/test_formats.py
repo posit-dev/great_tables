@@ -1861,6 +1861,8 @@ def _nanoplot_has_tag_attrs(nanoplot_str: str, tag: str, attrs: list[tuple[str, 
 
 df_fmt_nanoplot_single = pl.DataFrame({"vals": [-5.3, 6.3]})
 
+df_fmt_nanoplot_single_different_scales = pl.DataFrame({"vals": [-5.3, 100.0]})
+
 df_fmt_nanoplot_multi = pl.DataFrame(
     {
         "vals": [
@@ -1870,6 +1872,14 @@ df_fmt_nanoplot_multi = pl.DataFrame(
     }
 )
 
+df_fmt_nanoplot_multi_different_scales = pl.DataFrame(
+    {
+        "vals": [
+            {"x": [-12.0, -5.0, 6.0, 3.0, 0.0, 8.0, -7.0]},
+            {"x": [2, 0, 150, 7, 80, 10, 10, 240, 17, 13, 6]},
+        ],
+    }
+)
 
 FMT_NANOPLOT_CASES: list[dict[str, Any]] = [
     # 1. default case
@@ -2234,6 +2244,66 @@ def test_fmt_nanoplot_multi_vals_bar_ref_line_ref_area():
             ("fill-opacity", "0.8"),
         ],
     )
+
+
+# Test category 8: Scale unaffected by unselected rows for single line plot
+def test_fmt_nanoplot_single_vals_same_values_in_selected_rows():
+
+    # All test cases should have the same scale for each plot when their values are the same in
+    # in selected rows, ignoring values in unselected rows
+
+    for _, params in enumerate(FMT_NANOPLOT_CASES):
+
+        gt = GT(df_fmt_nanoplot_single).fmt_nanoplot(
+            columns="vals",
+            plot_type="line",
+            rows=[0],
+            **params,
+        )
+
+        gt_different_scales = GT(df_fmt_nanoplot_single_different_scales).fmt_nanoplot(
+            columns="vals",
+            plot_type="line",
+            rows=[0],
+            **params,
+        )
+
+        res = _get_column_of_values(gt, column_name="vals", context="html")[0]
+        res_different_scales = _get_column_of_values(
+            gt_different_scales, column_name="vals", context="html"
+        )[0]
+        assert res == res_different_scales
+
+
+# Test category 9: Scale unaffected by unselected rows for line plot with multiple values
+def test_fmt_nanoplot_multiple_vals_same_values_in_selected_rows_with_autoscale():
+
+    # All test cases should have the same scale for each plot when their values are the same in
+    # in selected rows and autoscale is used, ignoring values in unselected rows
+
+    for _, params in enumerate(FMT_NANOPLOT_CASES):
+
+        gt = GT(df_fmt_nanoplot_multi).fmt_nanoplot(
+            columns="vals",
+            plot_type="line",
+            rows=[0],
+            autoscale=True,
+            **params,
+        )
+
+        gt_different_scales = GT(df_fmt_nanoplot_multi_different_scales).fmt_nanoplot(
+            columns="vals",
+            plot_type="line",
+            rows=[0],
+            autoscale=True,
+            **params,
+        )
+
+        res = _get_column_of_values(gt, column_name="vals", context="html")[0]
+        res_different_scales = _get_column_of_values(
+            gt_different_scales, column_name="vals", context="html"
+        )[0]
+        assert res == res_different_scales
 
 
 @pytest.mark.parametrize(

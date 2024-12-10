@@ -4610,7 +4610,10 @@ def fmt_nanoplot(
     if plot_type in ["line", "bar"] and scalar_vals:
         # Check each cell in the column and get each of them that contains a scalar value
         # Why are we grabbing the first element of a tuple? (Note this also happens again below.)
-        all_single_y_vals = to_list(data_tbl[columns])
+        if rows is not None:
+            all_single_y_vals = to_list(data_tbl[columns][rows])
+        else:
+            all_single_y_vals = to_list(data_tbl[columns])
 
         autoscale = False
 
@@ -4631,7 +4634,10 @@ def fmt_nanoplot(
         # TODO: if a column of delimiter separated strings is passed. E.g. "1 2 3 4". Does this mean
         # that autoscale does not work? In this case, is col_i_y_vals_raw a string that gets processed?
         # downstream?
-        all_y_vals_raw = to_list(data_tbl[columns])
+        if rows is not None:
+            all_y_vals_raw = to_list(data_tbl[columns][rows])
+        else:
+            all_y_vals_raw = to_list(data_tbl[columns])
 
         all_y_vals = []
 
