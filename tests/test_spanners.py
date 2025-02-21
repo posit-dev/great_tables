@@ -14,6 +14,7 @@ from great_tables._spanners import (
     empty_spanner_matrix,
     spanners_print_matrix,
     tab_spanner,
+    SpannerTransformer,
 )
 from great_tables._utils_render_html import _get_table_defs
 
@@ -399,3 +400,89 @@ def test_validate_sel_cols_raises():
         "All `columns` must exist and be visible in the input `data` table."
         in exc_info.value.args[0]
     )
+
+
+def test_spanner_transforme_split():
+    columns = ["span_1.A", "span_1.B.x"]
+
+    # one column
+    assert SpannerTransformer(columns=[columns[0]]).split() == {
+        "span_1.A": ["span_1", "A"],
+    }
+
+    # multiple columns
+    assert SpannerTransformer(columns=columns).split() == {
+        "span_1.A": ["span_1", "A"],
+        "span_1.B.x": ["span_1", "B", "x"],
+    }
+
+    # reverse
+    assert SpannerTransformer(columns=columns, reverse=True).split() == {
+        "span_1.A": ["A", "span_1"],
+        "span_1.B.x": ["x", "B", "span_1"],
+    }
+
+    # limit
+    assert SpannerTransformer(columns=columns, limit=1).split() == {
+        "span_1.A": ["span_1", "A"],
+        "span_1.B.x": ["span_1.B", "x"],
+    }
+
+    # limit + split
+    assert SpannerTransformer(columns=columns, limit=1, split="first").split() == {
+        "span_1.A": ["span_1", "A"],
+        "span_1.B.x": ["span_1", "B.x"],
+    }
+
+    # limit + split + reverse
+    assert SpannerTransformer(columns=columns, limit=1, split="first", reverse=True).split() == {
+        "span_1.A": ["A", "span_1"],
+        "span_1.B.x": ["B.x", "span_1"],
+    }
+
+    # delim
+    assert SpannerTransformer(columns=columns, delim="_").split() == {
+        "span_1.A": ["span", "1.A"],
+        "span_1.B.x": ["span", "1.B.x"],
+    }
+
+
+def test_spanner_transforme_split_realistic():
+    columns = [
+        "pop.NL_ZH.province",
+        "gdp.NL_ZH.province",
+        "pop.NL_NH.province",
+        "gdp.NL_NH.province",
+    ]
+
+    assert SpannerTransformer(columns=columns, reverse=True).split() == {
+        "pop.NL_ZH.province": ["province", "NL_ZH", "pop"],
+        "gdp.NL_ZH.province": ["province", "NL_ZH", "gdp"],
+        "pop.NL_NH.province": ["province", "NL_NH", "pop"],
+        "gdp.NL_NH.province": ["province", "NL_NH", "gdp"],
+    }
+
+    columns = ["pop.NL_ZH", "gdp.NL_ZH", "pop.NL_NH", "gdp.NL_NH"]
+    assert SpannerTransformer(columns=columns, reverse=True).split() == {
+        "pop.NL_ZH": ["NL_ZH", "pop"],
+        "gdp.NL_ZH": ["NL_ZH", "gdp"],
+        "pop.NL_NH": ["NL_NH", "pop"],
+        "gdp.NL_NH": ["NL_NH", "gdp"],
+    }
+
+
+def test_spanner_transforme_get_rectangle():
+    columns = ["span_1.A", "span_1.B.x"]
+    assert SpannerTransformer(columns=columns).get_rectangle() == [
+        columns,
+        [None, "x"],
+        ["A", "B"],
+        ["span_1", "span_1"],
+    ]
+
+    assert SpannerTransformer(columns=columns, reverse=True).get_rectangle() == [
+        columns,
+        ["A", "x"],
+        ["span_1", "B"],
+        [None, "span_1"],
+    ]
