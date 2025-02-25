@@ -1870,6 +1870,21 @@ df_fmt_nanoplot_multi = pl.DataFrame(
     }
 )
 
+df_fmt_nanoplot_multi_xy = pl.DataFrame(
+    {
+        "vals": [
+            {
+                "x": [6.1, 8.0, 10.1, 10.5, 11.2, 12.4, 13.1, 15.3],
+                "y": [24.2, 28.2, 30.2, 30.5, 30.5, 33.1, 33.5, 32.7],
+            },
+            {
+                "x": [7.1, 8.2, 10.3, 10.75, 11.25, 12.5, 13.5, 14.2],
+                "y": [18.2, 18.1, 20.3, 20.5, 21.4, 21.9, 23.1, 23.3],
+            },
+        ]
+    }
+)
+
 
 FMT_NANOPLOT_CASES: list[dict[str, Any]] = [
     # 1. default case
@@ -2232,6 +2247,36 @@ def test_fmt_nanoplot_multi_vals_bar_ref_line_ref_area():
             ("stroke-width", "2"),
             ("fill", "#A6E6F2"),
             ("fill-opacity", "0.8"),
+        ],
+    )
+
+
+# Test category 8: Line-based nanoplot, multiple values per row, reference line and reference area
+def test_fmt_nanoplot_x_y_vals():
+    gt = GT(df_fmt_nanoplot_multi_xy).fmt_nanoplot(
+        columns="vals",
+        plot_type="line",
+        **FMT_NANOPLOT_CASES[8],
+    )
+    res = _get_column_of_values(gt, column_name="vals", context="html")[0]
+
+    assert _nanoplot_has_tag_attrs(
+        res,
+        tag="path",
+        attrs=[
+            ("stroke", "transparent"),
+            ("stroke-width", "2"),
+            ("fill-opacity", "0.7"),
+        ],
+    )
+
+    assert _nanoplot_has_tag_attrs(
+        res,
+        tag="polyline",
+        attrs=[
+            ("stroke", "#4682B4"),
+            ("stroke-width", "8"),
+            ("fill", "none"),
         ],
     )
 

@@ -913,7 +913,9 @@ def _generate_nanoplot(
     # there are no x values, generate equally-spaced x values according
     # to the number of y values
     if plot_type == "line" and x_vals is not None:
-        if expand_x is not None and _val_is_str(expand_x):
+        if isinstance(expand_x, str) or (
+            isinstance(expand_x, list) and any(isinstance(item, str) for item in expand_x)
+        ):
             # TODO: the line below lacked tests, and called non-existent methods.
             # replace with something that doesn't use pandas and returns the correct thing.
 
