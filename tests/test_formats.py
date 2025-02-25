@@ -1116,6 +1116,51 @@ def test_format_number_with_sep_dec_marks():
 
 
 # ------------------------------------------------------------------------------
+# Tests of `fmt_scientific()`
+# ------------------------------------------------------------------------------
+
+FMT_SCIENTIFIC_CASES: list[tuple[dict[str, Any], list[str]]] = [
+    (
+        dict(),
+        [
+            "1.23 × 10<sup style='font-size: 65%;'>8</sup>",
+            "1.23 × 10<sup style='font-size: 65%;'>−6</sup>",
+            "1.23 × 10<sup style='font-size: 65%;'>−12</sup>",
+        ],
+    ),
+    (
+        dict(force_sign_m=True, force_sign_n=True),
+        [
+            "+1.23 × 10<sup style='font-size: 65%;'>+8</sup>",
+            "+1.23 × 10<sup style='font-size: 65%;'>−6</sup>",
+            "+1.23 × 10<sup style='font-size: 65%;'>−12</sup>",
+        ],
+    ),
+    (dict(exp_style="E"), ["1.23E08", "1.23E−06", "1.23E−12"]),
+    (dict(exp_style="E1"), ["1.23E8", "1.23E−6", "1.23E−12"]),
+    (dict(exp_style="E", force_sign_n=True), ["1.23E+08", "1.23E−06", "1.23E−12"]),
+    (dict(exp_style="E1", force_sign_n=True), ["1.23E+8", "1.23E−6", "1.23E−12"]),
+    (dict(exp_style="E", n_sigfig=5), ["1.2346E08", "1.2300E−06", "1.2340E−12"]),
+    (
+        dict(exp_style="low-ten"),
+        [
+            "1.23<sub style='font-size: 65%;'>10</sub>08",
+            "1.23<sub style='font-size: 65%;'>10</sub>−06",
+            "1.23<sub style='font-size: 65%;'>10</sub>−12",
+        ],
+    ),
+]
+
+
+@pytest.mark.parametrize("fmt_scientific_kwargs,x_out", FMT_SCIENTIFIC_CASES)
+def test_fmt_scientific_case(fmt_scientific_kwargs: dict[str, Any], x_out: list[str]):
+    df = pd.DataFrame({"x": [123456789, 0.00000123, 0.000000000001234]})
+    gt = GT(df).fmt_scientific(columns="x", **fmt_scientific_kwargs)
+    x = _get_column_of_values(gt, column_name="x", context="html")
+    assert x == x_out
+
+
+# ------------------------------------------------------------------------------
 # Tests of `fmt_currency()`
 # ------------------------------------------------------------------------------
 

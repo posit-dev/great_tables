@@ -34,7 +34,7 @@ from ._tbl_data import (
     to_list,
 )
 from ._text import _md_html, escape_pattern_str_latex
-from ._utils import is_valid_http_schema, _str_detect, _str_replace
+from ._utils import _str_detect, _str_replace, is_valid_http_schema
 from ._utils_nanoplots import _generate_nanoplot
 
 if TYPE_CHECKING:
@@ -840,10 +840,10 @@ def fmt_scientific_context(
         # the defined minimum number of decimal places
         if _str_detect(n_part, "-"):
             n_part = _str_replace(n_part, "-", "")
-            n_part = n_part.ljust(n_min_width, "0")
+            n_part = n_part.rjust(n_min_width, "0")
             n_part = "-" + n_part
         else:
-            n_part = n_part.ljust(n_min_width, "0")
+            n_part = n_part.rjust(n_min_width, "0")
             if force_sign_n:
                 n_part = "+" + n_part
 
