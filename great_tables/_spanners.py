@@ -3,12 +3,13 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING
 
+from typing_extensions import TypeAlias
+
 from ._gt_data import SpannerInfo, Spanners
 from ._locations import resolve_cols_c
 from ._tbl_data import SelectExpr
 from ._text import BaseText, Text
 from ._utils import OrderedSet, _assert_list_is_subset
-from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
     from ._gt_data import Boxhead
@@ -92,7 +93,7 @@ def tab_spanner(
     performance under a unifying label.
 
     ```{python}
-    from great_tables import GT
+    from great_tables import GT, md
     from great_tables.data import gtcars
 
     colnames = ["model", "hp", "hp_rpm", "trq", "trq_rpm", "mpg_c", "mpg_h"]

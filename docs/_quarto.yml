@@ -179,6 +179,7 @@ quartodoc:
         - style.fill
         - style.text
         - style.borders
+        - style.css
     - title: Helper functions
       desc: >
         An assortment of helper functions is available in the **Great Tables** package. The
