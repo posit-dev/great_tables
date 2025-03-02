@@ -11,6 +11,7 @@ from great_tables._spanners import (
     cols_move,
     cols_move_to_end,
     cols_move_to_start,
+    cols_reorder,
     empty_spanner_matrix,
     spanners_print_matrix,
     tab_spanner,
@@ -356,6 +357,34 @@ def test_cols_move_to_end_multi_cols(DF, columns):
     src_gt = GT(df)
     new_gt = cols_move_to_end(src_gt, columns=columns)
     assert [col.var for col in new_gt._boxhead] == ["b", "d", "a", "c"]
+
+
+@pytest.mark.parametrize(
+    "DF, columns",
+    [
+        (pd.DataFrame, ["a", "d", "c", "b"]),
+        (pl.DataFrame, pl.col("a", "d", "c", "b")),
+        (pl.DataFrame, [pl.col("a", "d", "c"), "b"]),
+    ],
+)
+def test_cols_reorder(DF, columns):
+    df = DF({"a": [1, 2], "b": [3, 4], "c": [5, 6], "d": [7, 8]})
+    src_gt = GT(df)
+    new_gt = cols_reorder(src_gt, columns=columns)
+    assert [col.var for col in new_gt._boxhead] == ["a", "d", "c", "b"]
+
+
+@pytest.mark.parametrize(
+    "DF, columns",
+    [(pd.DataFrame, ["a", "d"]), (pl.DataFrame, ["a", "d", "c"])],
+)
+def test_cols_reorder_raises(DF, columns):
+    df = DF({"a": [1, 2], "b": [3, 4], "c": [5, 6], "d": [7, 8]})
+    src_gt = GT(df)
+    with pytest.raises(Exception) as exc_info:
+        new_gt = cols_reorder(src_gt, columns=columns)
+
+    assert "Reordering vars must contain all boxhead vars." in exc_info.value.args[0]
 
 
 @pytest.mark.parametrize("DF, columns", [(pd.DataFrame, "c"), (pl.DataFrame, cs.starts_with("c"))])

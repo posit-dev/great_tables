@@ -52,6 +52,7 @@ from ._spanners import (
     cols_move,
     cols_move_to_end,
     cols_move_to_start,
+    cols_reorder,
     cols_width,
     tab_spanner,
 )
@@ -256,6 +257,7 @@ class GT(
     cols_move = cols_move
     cols_move_to_start = cols_move_to_start
     cols_move_to_end = cols_move_to_end
+    cols_reorder = cols_reorder
     cols_hide = cols_hide
 
     tab_header = tab_header

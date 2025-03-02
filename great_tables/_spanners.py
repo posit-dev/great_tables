@@ -753,3 +753,58 @@ def cols_width(self: GTSelf, cases: dict[str, str] | None = None, **kwargs: str)
         curr_boxhead = curr_boxhead._set_column_width(col, width)
 
     return self._replace(_boxhead=curr_boxhead)
+
+
+def cols_reorder(self: GTSelf, columns: SelectExpr) -> GTSelf:
+    """Reordering the columns as specified.
+
+    We can easily reorder columns by specifying `columns`. While this can be done upstream of
+    **Great Tables**, `cols_reorder()` is simpler and reduces the chance of errors. The order of
+    `columns` is preserved.
+
+    Note that all columns specified in `columns` must exist in the table, and the list must contain
+    the same number of columns as the original table.
+
+    Parameters
+    ----------
+    columns
+        The columns to target, specified as a list of column names.
+
+    Returns
+    -------
+    GT
+        The GT object is returned. This is the same object that the method is called on so that we
+        can facilitate method chaining.
+
+    Examples
+    --------
+    Let's use the `exibble` dataset to create a new table.
+    ```{python}
+    from great_tables import GT
+    from great_tables.data import exibble
+
+    gt = GT(exibble)
+    gt
+    ```
+    Suppose you want to move the `fctr` column to the beginning of the table and position the `char`
+    and `num` columns as the last two. While this can be accomplished using `cols_move()`,
+    `cols_move_to_start()`, and `cols_move_to_end()`, **Great Tables** offers a more convenient
+    function: `cols_reorder()`. By passing a list of column names to the `columns=` parameter,
+    the table will be reordered accordingly:
+    ```{python}
+    col1, col2, col3, *cols = exibble.columns  # col1="num", col2="char", col3="fctr"
+    gt.cols_reorder([col3, *cols, col2,  col1])
+    ```
+    """
+
+    if isinstance(columns, str):
+        columns = [columns]
+
+    sel_cols = resolve_cols_c(data=self, expr=columns)
+
+    col_vars = [col.var for col in self._boxhead]
+
+    _validate_sel_cols(sel_cols, col_vars)
+
+    new_boxhead = self._boxhead.reorder(sel_cols)
+    return self._replace(_boxhead=new_boxhead)
