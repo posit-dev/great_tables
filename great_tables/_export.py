@@ -9,7 +9,6 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from css_inline import inline, inline_fragment
 from typing_extensions import TypeAlias
 
 from ._helpers import random_id
@@ -217,39 +216,36 @@ def as_raw_html(
     gt_tbl.as_raw_html(inline_css=True)
     ```
     """
+
     built_table = self._build_data(context="html")
-
-    if not inline_css:
-        html_table = built_table._render_as_html(
-            make_page=make_page,
-            all_important=all_important,
-        )
-
-        return html_table
 
     table_html = built_table._render_as_html(
         make_page=make_page,
         all_important=all_important,
     )
 
-    if make_page:
-        inlined = inline(html=table_html)
+    if inline_css:
+        _try_import(name="css_inline", pip_install_line="pip install css-inline")
+        from css_inline import inline, inline_fragment
 
-    else:
-        # Obtain the `table_id` value from the Options (might be set, might be None)
-        table_id = self._options.table_id.value
+        if make_page:
+            return inline(html=table_html)
 
-        if table_id is None:
-            id = random_id()
         else:
-            id = table_id
+            # Obtain the `table_id` value from the Options (might be set, might be None)
+            table_id = self._options.table_id.value
 
-        # Compile the SCSS as CSS
-        table_css = str(compile_scss(self, id=id, compress=False, all_important=all_important))
+            if table_id is None:
+                id = random_id()
+            else:
+                id = table_id
 
-        inlined = inline_fragment(html=table_html, css=table_css)
+            # Compile the SCSS as CSS
+            table_css = str(compile_scss(self, id=id, compress=False, all_important=all_important))
 
-    return inlined
+            return inline_fragment(html=table_html, css=table_css)
+
+    return table_html
 
 
 def as_latex(self: GT, use_longtable: bool = False, tbl_pos: str | None = None) -> str:
