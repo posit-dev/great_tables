@@ -7,6 +7,7 @@ from collections.abc import Generator, Set
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, Iterable, Iterator
 
+from ._helpers import UnitStr
 from ._tbl_data import _get_cell, _set_cell, get_column_names, n_rows
 from ._text import BaseText, _process_text
 
@@ -285,3 +286,26 @@ def _get_visible_cells(data: TblData) -> list[tuple[str, int]]:
 
 def is_valid_http_schema(url: str) -> bool:
     return url.startswith("http://") or url.startswith("https://")
+
+
+def _handle_units_syntax(cases: dict[str, str | BaseText]) -> dict[str, UnitStr | str | BaseText]:
+    # Handle units syntax in labels (e.g., "Density ({{ppl / mi^2}})")
+    kwargs: dict[str, UnitStr | str | BaseText] = {}
+
+    for k, v in cases.items():
+        if isinstance(v, str):
+            unitstr_v = UnitStr.from_str(v)
+
+            if len(unitstr_v.units_str) == 1 and isinstance(unitstr_v.units_str[0], str):
+                kwargs[k] = unitstr_v.units_str[0]
+            else:
+                kwargs[k] = unitstr_v
+
+        elif isinstance(v, BaseText):
+            kwargs[k] = v
+
+        else:
+            raise ValueError(
+                "Column labels must be strings or BaseText objects. Use `md()` or `html()` for formatting."
+            )
+    return kwargs

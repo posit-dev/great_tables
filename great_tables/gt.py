@@ -6,7 +6,7 @@ from typing_extensions import Self
 
 # Main gt imports ----
 from ._body import body_reassemble
-from ._boxhead import cols_align, cols_label
+from ._boxhead import cols_align, cols_label, cols_label_with
 from ._data_color import data_color
 from ._export import as_latex, as_raw_html, save, show, write_raw_html
 from ._formats import (
@@ -255,6 +255,7 @@ class GT(
     cols_align = cols_align
     cols_width = cols_width
     cols_label = cols_label
+    cols_label_with = cols_label_with
     cols_move = cols_move
     cols_move_to_start = cols_move_to_start
     cols_move_to_end = cols_move_to_end
