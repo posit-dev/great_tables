@@ -56,6 +56,73 @@ def test_cols_label_return_self_if_no_kwargs():
     assert isinstance(unmodified_table, gt.GT)
 
 
+def test_cols_label_with_relabel_columns():
+    # Create a table with default column labels
+    df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+    table = gt.GT(df)
+
+    # Relabel the columns
+    modified_table = table.cols_label_with(converter=str.lower)
+
+    # Check that the column labels have been updated
+    assert modified_table._boxhead._get_column_labels() == ["a", "b"]
+
+
+@pytest.mark.parametrize(
+    "converter",
+    [
+        pl.col("my_col", "my_col2").name.to_uppercase(),
+        pl.col(["my_col", "my_col2"]).name.to_uppercase(),
+        cs.by_name("my_col", "my_col2").name.to_uppercase(),
+        cs.by_name(["my_col", "my_col2"]).name.to_uppercase(),
+        cs.starts_with("my").name.to_uppercase(),
+        [cs.by_name("my_col").name.to_uppercase(), cs.by_name("my_col2").name.to_uppercase()],
+        [pl.col("my_col").name.to_uppercase(), cs.by_name("my_col2").name.to_uppercase()],
+        [cs.all().name.suffix("_suffix"), cs.all().name.to_uppercase()],  # test for last one wins
+        pl.col("my_col2", "my_col").name.to_uppercase(),  # test for column positions
+    ],
+)
+def test_cols_label_with_relabel_columns_polars(converter):
+    # Create a table with default column labels
+    df = pl.DataFrame({"my_col": [1, 2, 3], "my_col2": [4, 5, 6]})
+    table = gt.GT(df)
+
+    # Relabel the columns
+    modified_table = table.cols_label_with(converter=converter)
+
+    # Check that the column labels have been updated
+    assert modified_table._boxhead._get_column_labels() == ["MY_COL", "MY_COL2"]
+
+
+def test_cols_label_with_relabel_columns_with_markdown():
+    # Create a table with default column labels
+    df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+    table = gt.GT(df)
+
+    # Relabel a column with a Markdown formatted label
+    modified_table = table.cols_label_with("A", lambda x: gt.md(f"**{x}**"))
+
+    # Check that the column label has been updated with Markdown formatting
+    modified_column_labels = modified_table._boxhead._get_column_labels()
+
+    assert modified_column_labels[0].text == "**A**"
+    assert modified_column_labels[1] == "B"
+
+
+def test_cols_label_with_raises():
+    # Create a table with default column labels
+    df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+    table = gt.GT(df)
+
+    with pytest.raises(ValueError) as exc_info:
+        table.cols_label_with()
+
+    assert (
+        "Must provide the `converter=` parameter to use `cols_label_with()`."
+        in exc_info.value.args[0]
+    )
+
+
 def test_cols_align_default():
     df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
     table = gt.GT(df)

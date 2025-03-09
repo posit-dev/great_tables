@@ -2,7 +2,7 @@ from collections.abc import Generator
 import pytest
 
 
-from great_tables import GT, exibble
+from great_tables import GT, exibble, md
 from great_tables._tbl_data import is_na
 from great_tables._utils import (
     _assert_list_is_subset,
@@ -10,6 +10,7 @@ from great_tables._utils import (
     _assert_str_list,
     _assert_str_scalar,
     _collapse_list_elements,
+    _handle_units_syntax,
     _insert_into_list,
     _match_arg,
     _migrate_unformatted_to_output,
@@ -224,3 +225,21 @@ def test_migrate_unformatted_to_output_html():
 )
 def test_is_valid_http_schema(url: str):
     assert is_valid_http_schema(url)
+
+
+def test_handle_units_syntax():
+    from great_tables._text import BaseText
+
+    new_kwargs = _handle_units_syntax({"column_label_1": "abc", "column_label_2": md(text="xyz")})
+
+    assert all(isinstance(v, (str, BaseText)) for v in new_kwargs.values())
+
+
+def test_handle_units_syntax_raises():
+    with pytest.raises(ValueError) as exc_info:
+        _handle_units_syntax({"column_label": 123})
+
+    assert (
+        "Column labels must be strings or BaseText objects. Use `md()` or `html()` for formatting."
+        in exc_info.value.args[0]
+    )

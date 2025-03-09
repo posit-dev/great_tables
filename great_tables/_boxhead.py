@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING
 
 from ._locations import resolve_cols_c
-from ._utils import _assert_list_is_subset
+from ._utils import _assert_list_is_subset, _handle_units_syntax
 from ._tbl_data import SelectExpr
 from ._text import BaseText
 
 if TYPE_CHECKING:
     from ._types import GTSelf
+    from polars.selectors import _selector_proxy_
+
+    PlSelectExpr = _selector_proxy_
 
 
 def cols_label(
@@ -114,8 +117,6 @@ def cols_label(
     )
     ```
     """
-    from great_tables._helpers import UnitStr
-
     cases = cases if cases is not None else {}
     new_cases = cases | kwargs
 
@@ -132,26 +133,145 @@ def cols_label(
     _assert_list_is_subset(mod_columns, set_list=column_names)
 
     # Handle units syntax in labels (e.g., "Density ({{ppl / mi^2}})")
-    new_kwargs: dict[str, UnitStr | str | BaseText] = {}
-
-    for k, v in new_cases.items():
-        if isinstance(v, str):
-            unitstr_v = UnitStr.from_str(v)
-
-            if len(unitstr_v.units_str) == 1 and isinstance(unitstr_v.units_str[0], str):
-                new_kwargs[k] = unitstr_v.units_str[0]
-            else:
-                new_kwargs[k] = unitstr_v
-
-        elif isinstance(v, BaseText):
-            new_kwargs[k] = v
-
-        else:
-            raise ValueError(
-                "Column labels must be strings or BaseText objects. Use `md()` or `html()` for formatting."
-            )
+    new_kwargs = _handle_units_syntax(new_cases)
 
     boxhead = self._boxhead._set_column_labels(new_kwargs)
+
+    return self._replace(_boxhead=boxhead)
+
+
+def cols_label_with(
+    self: GTSelf,
+    columns: SelectExpr = None,
+    converter: Callable[[str], str] | PlSelectExpr | list[PlSelectExpr] | None = None,
+) -> GTSelf:
+    """
+    Relabel one or more columns using a function or a Polars expression.
+
+    The `cols_label_with()` function allows for modification of column labels through a supplied
+    function. By default, the function will be invoked on all column labels but this can be limited
+    to a subset via the `columns=` parameter.
+
+    Alternatively, you can utilize the
+    [name](https://docs.pola.rs/api/python/stable/reference/expressions/name.html) attribute of
+    Polars expressions.
+
+    :::{.callout-warning}
+    If Polars expressions are utilized, the `columns=` parameter will be ignored, as **Great Tables**
+    can infer the original column labels from the expression.
+    :::
+
+    Parameters
+    ----------
+    columns
+        The columns to target. Can either be a single column name or a series of column names
+        provided in a list.
+    converter
+        A function that takes a column label as input and returns a transformed label.
+        Alternatively, you can use a Polars expression or a list of Polars expressions to describe
+        the transformations.
+
+    Returns
+    -------
+    GT
+        The GT object is returned. This is the same object that the method is called on so that we
+        can facilitate method chaining.
+
+    Notes
+    -----
+    GT always selects columns using their name in the underlying data. This means that a column's
+    label is purely for final presentation.
+
+    Examples
+    --------
+    Let's use a subset of the `sp500` dataset to demonstrate how to convert all column labels to
+    uppercase using `str.upper()`.
+
+    ```{python}
+    import polars as pl
+    from polars import selectors as cs
+
+    from great_tables import GT, md
+    from great_tables.data import sp500
+
+    sp500_mini = sp500.head()
+
+    GT(sp500_mini).cols_label_with(converter=str.upper)
+    ```
+
+    One useful use case is using `md()`, provided by **Great Tables**, to format column labels.
+    For example, the following code demonstrates how to make the `date` and `adj_close` column labels
+    bold using markdown syntax.
+
+    ```{python}
+    GT(sp500_mini).cols_label_with(["date", "adj_close"], lambda x: md(f"**{x}**"))
+    ```
+
+    Now, let's see how to use Polars expressions to relabel a table when the underlying dataframe
+    comes from Polars. For instance, you can convert all column labels to uppercase using
+    `pl.all().name.to_uppercase()`.
+
+    ```{python}
+    sp500_mini_pl = pl.from_pandas(sp500_mini)
+    GT(sp500_mini_pl).cols_label_with(converter=pl.all().name.to_uppercase())
+    ```
+
+    Polars selectors are also supported. The following example demonstrates how to add a "str_"
+    prefix to string columns using `cs.string().name.prefix("str_")`.
+
+    ```{python}
+    GT(sp500_mini_pl).cols_label_with(converter=cs.string().name.prefix("str_"))
+    ```
+
+    Passing a list of Polars expressions is also supported. The following example shows how to
+    add a "str_" prefix to string columns using `cs.string().name.prefix("str_")`
+    and a "_num" suffix to numerical columns using `cs.numeric().name.suffix("_num")`.
+
+    ```{python}
+    GT(sp500_mini_pl).cols_label_with(
+        converter=[cs.string().name.prefix("str_"), cs.numeric().name.suffix("_num")]
+    )
+    ```
+
+    One final note: if a column is selected multiple times in different Polars expressions,
+    the last applied transformation takes precedence. For example, applying
+    `cs.all().name.to_uppercase()` followed by `cs.all().name.suffix("_all")`
+    will result in only the latter being used for relabeling.
+
+    ```{python}
+    GT(sp500_mini_pl).cols_label_with(
+        converter=[cs.all().name.to_uppercase(), cs.all().name.suffix("_all")]
+    )
+    ```
+
+    """
+    if converter is None:
+        raise ValueError("Must provide the `converter=` parameter to use `cols_label_with()`.")
+
+    if isinstance(converter, Callable):
+        # Get the full list of column names for the data
+        column_names = self._boxhead._get_columns()
+
+        if isinstance(columns, str):
+            columns = [columns]
+            _assert_list_is_subset(columns, set_list=column_names)
+        elif columns is None:
+            columns = column_names
+
+        sel_cols = resolve_cols_c(data=self, expr=columns)
+
+        new_cases = {col: converter(col) for col in sel_cols}
+
+    else:  # pl.col().expr.name.method() or selector.name.method() or [...]
+        frame = self._tbl_data
+        new_cases: dict[str, str] = {}
+        exprs = converter if isinstance(converter, list) else [converter]
+        for expr in exprs:
+            sel_cols: list[str] = frame.select(expr.meta.undo_aliases()).columns
+            new_cols: list[str] = frame.select(expr).columns
+            new_cases |= dict(zip(sel_cols, new_cols))
+
+    boxhead = self._boxhead._set_column_labels(new_cases)
 
     return self._replace(_boxhead=boxhead)
 
